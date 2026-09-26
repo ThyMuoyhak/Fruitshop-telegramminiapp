@@ -25,7 +25,8 @@ os.makedirs(config.UPLOAD_DIR, exist_ok=True)
 os.makedirs("static/css", exist_ok=True)
 os.makedirs("static/js", exist_ok=True)
 
-# Mount Static Files
+# Mount Static Files (Uploads directory mounted first to support persistent disk)
+app.mount("/static/uploads", StaticFiles(directory=config.UPLOAD_DIR), name="uploads")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Templates Engine (Jinja2)
