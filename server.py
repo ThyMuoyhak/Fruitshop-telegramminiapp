@@ -1,9 +1,18 @@
+import sys
 import os
 import time
 import shutil
 import logging
 from datetime import datetime
-from typing import Optional, List
+
+# Ensure UTF-8 output on Windows console
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+from typing import Optional, List, Dict
 from fastapi import FastAPI, Request, Form, UploadFile, File, Response, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -35,14 +44,55 @@ templates = Jinja2Templates(directory="templates")
 # Initialize database
 database.init_db()
 
-# --- Auth Helper ---
-def is_authenticated(request: Request) -> bool:
-    session_val = request.cookies.get("admin_session")
-    return session_val == config.ADMIN_PASSWORD
+# --- Auth & Security Helpers ---
+login_attempts: Dict[str, List[float]] = {}
 
-def require_admin(request: Request):
-    if not is_authenticated(request):
-        raise HTTPException(status_code=303, detail="Redirect to login")
+def check_login_rate_limit(ip: str) -> bool:
+    now = time.time()
+    attempts = login_attempts.get(ip, [])
+    attempts = [t for t in attempts if now - t < 60]
+    login_attempts[ip] = attempts
+    return len(attempts) < 8
+
+def record_failed_login(ip: str):
+    now = time.time()
+    if ip not in login_attempts:
+        login_attempts[ip] = []
+    login_attempts[ip].append(now)
+
+def is_authenticated(request: Request) -> bool:
+    """
+    Validates either the secure admin_session cookie or the X-Admin-Token header.
+    """
+    session_val = request.cookies.get("admin_session")
+    auth_header = request.headers.get("X-Admin-Token") or request.headers.get("Authorization")
+    token_val = auth_header.replace("Bearer ", "").strip() if auth_header else None
+    return bool((session_val and session_val == config.ADMIN_PASSWORD) or (token_val and token_val == config.ADMIN_PASSWORD))
+
+@app.middleware("http")
+async def admin_security_middleware(request: Request, call_next):
+    """
+    Global Security Barrier:
+    Enforces strict authentication on all /admin endpoints.
+    Blocks any user or script from creating, modifying, or deleting products or categories.
+    """
+    path = request.url.path
+    if path.startswith("/admin") and path != "/admin/login":
+        if not is_authenticated(request):
+            # If API/mutation request, immediately block with 401 Unauthorized JSON
+            if request.method in ["POST", "PUT", "DELETE", "PATCH"] or "application/json" in request.headers.get("accept", ""):
+                return JSONResponse(
+                    {
+                        "error": "Unauthorized",
+                        "detail": "Admin authentication required. You cannot bypass or access this endpoint without logging in."
+                    },
+                    status_code=401
+                )
+            # Browser navigation redirect to login page
+            return RedirectResponse(url="/admin/login?error=Access+denied.+Admin+login+required.", status_code=303)
+
+    response = await call_next(request)
+    return response
 
 # --- Telegram Bot Notification Helper ---
 async def notify_telegram_admin(message: str):
@@ -236,11 +286,23 @@ async def admin_login_page(request: Request, error: Optional[str] = None):
     return templates.TemplateResponse(request=request, name="admin/login.html", context={"error": error})
 
 @app.post("/admin/login")
-async def admin_login_submit(username: str = Form(...), password: str = Form(...)):
+async def admin_login_submit(request: Request, username: str = Form(...), password: str = Form(...)):
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_login_rate_limit(client_ip):
+        return RedirectResponse(url="/admin/login?error=Too+many+failed+attempts.+Please+wait+1+minute.", status_code=303)
+
     if username == config.ADMIN_USERNAME and password == config.ADMIN_PASSWORD:
         response = RedirectResponse(url="/admin", status_code=303)
-        response.set_cookie(key="admin_session", value=config.ADMIN_PASSWORD, httponly=True)
+        response.set_cookie(
+            key="admin_session",
+            value=config.ADMIN_PASSWORD,
+            httponly=True,
+            samesite="lax",
+            max_age=86400 * 7
+        )
         return response
+
+    record_failed_login(client_ip)
     return RedirectResponse(url="/admin/login?error=Invalid+Credentials", status_code=303)
 
 @app.get("/admin/logout")
@@ -294,6 +356,7 @@ async def admin_product_new_form(request: Request):
 
 @app.post("/admin/products/new")
 async def admin_product_create(
+    request: Request,
     category_id: int = Form(...),
     name_kh: str = Form(...),
     name_en: str = Form(...),
@@ -305,6 +368,9 @@ async def admin_product_create(
     is_available: Optional[int] = Form(1),
     image_file: Optional[UploadFile] = File(None)
 ):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/admin/login?error=Unauthorized", status_code=303)
+
     final_image_url = image_url or ""
 
     # Process file upload if provided
@@ -347,6 +413,7 @@ async def admin_product_edit_form(request: Request, product_id: int):
 
 @app.post("/admin/products/edit/{product_id}")
 async def admin_product_update(
+    request: Request,
     product_id: int,
     category_id: int = Form(...),
     name_kh: str = Form(...),
@@ -359,6 +426,9 @@ async def admin_product_update(
     is_available: Optional[int] = Form(0),
     image_file: Optional[UploadFile] = File(None)
 ):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/admin/login?error=Unauthorized", status_code=303)
+
     existing = database.get_product(product_id)
     final_image_url = image_url or (existing.get("image_url") if existing else "")
 
@@ -385,12 +455,16 @@ async def admin_product_update(
     return RedirectResponse(url="/admin/products?msg=Product+updated+successfully!", status_code=303)
 
 @app.post("/admin/products/toggle/{product_id}")
-async def admin_product_toggle_stock(product_id: int):
+async def admin_product_toggle_stock(request: Request, product_id: int):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/admin/login?error=Unauthorized", status_code=303)
     database.toggle_product_availability(product_id)
     return RedirectResponse(url="/admin/products", status_code=303)
 
 @app.post("/admin/products/delete/{product_id}")
-async def admin_product_delete(product_id: int):
+async def admin_product_delete(request: Request, product_id: int):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/admin/login?error=Unauthorized", status_code=303)
     database.delete_product(product_id)
     return RedirectResponse(url="/admin/products?msg=Product+deleted+successfully!", status_code=303)
 
@@ -410,16 +484,21 @@ async def admin_categories_list(request: Request, msg: Optional[str] = None):
 
 @app.post("/admin/categories/new")
 async def admin_category_create(
+    request: Request,
     name_kh: str = Form(...),
     name_en: str = Form(...),
     icon: str = Form("🍎"),
     sort_order: int = Form(0)
 ):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/admin/login?error=Unauthorized", status_code=303)
     database.add_category(name_en=name_en, name_kh=name_kh, icon=icon, sort_order=sort_order)
     return RedirectResponse(url="/admin/categories?msg=Category+added+successfully!", status_code=303)
 
 @app.post("/admin/categories/delete/{category_id}")
-async def admin_category_delete(category_id: int):
+async def admin_category_delete(request: Request, category_id: int):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/admin/login?error=Unauthorized", status_code=303)
     deleted = database.delete_category(category_id)
     if not deleted:
         return RedirectResponse(url="/admin/categories?msg=Cannot+delete+category+with+active+products!", status_code=303)
@@ -441,7 +520,9 @@ async def admin_orders_list(request: Request, status: Optional[str] = None, msg:
     })
 
 @app.post("/admin/orders/status/{tx_id}")
-async def admin_update_order_status(tx_id: str, status: str = Form(...)):
+async def admin_update_order_status(request: Request, tx_id: str, status: str = Form(...)):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/admin/login?error=Unauthorized", status_code=303)
     database.update_order_status(tx_id, status)
     return RedirectResponse(url="/admin/orders?msg=Order+status+updated!", status_code=303)
 
