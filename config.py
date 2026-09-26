@@ -40,8 +40,13 @@ MAX_POLL_ATTEMPTS = 45  # 45 * 4 = 180 seconds (3 minutes)
 
 # Web & Telegram MiniApp Server Settings
 SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
-SERVER_PORT = int(os.getenv("SERVER_PORT", "8000"))
-WEBAPP_URL = os.getenv("WEBAPP_URL", "http://localhost:8000/shop")
+SERVER_PORT = int(os.getenv("PORT", os.getenv("SERVER_PORT", "8000")))
+
+render_url = os.getenv("RENDER_EXTERNAL_URL")
+if render_url:
+    WEBAPP_URL = os.getenv("WEBAPP_URL", f"{render_url.rstrip('/')}/shop")
+else:
+    WEBAPP_URL = os.getenv("WEBAPP_URL", "http://localhost:8000/shop")
 
 # Admin Dashboard Credentials (FastAPI MVT)
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
