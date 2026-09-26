@@ -26,8 +26,13 @@ import payment
 logger = logging.getLogger("food_kh_server")
 logging.basicConfig(level=logging.INFO)
 
-# Initialize FastAPI App
-app = FastAPI(title="Food Fruit KH — MiniApp & Admin Dashboard")
+# Initialize FastAPI App (Docs, Redoc, and OpenAPI disabled for production security)
+app = FastAPI(
+    title="Food Fruit KH — MiniApp & Admin Dashboard",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
 
 # Ensure required directories exist
 os.makedirs(config.UPLOAD_DIR, exist_ok=True)
