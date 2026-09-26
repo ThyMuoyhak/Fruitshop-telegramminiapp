@@ -1,0 +1,201 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard — Food Fruit KH Admin{% endblock %}
+{% block page_title %}📊 ស្ថិតិ & ទិដ្ឋភាពទូទៅ (Dashboard Overview){% endblock %}
+
+{% block extra_head %}
+<style>
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  }
+  .kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .kpi-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+  .kpi-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .badge-pending { background: #fef3c7; color: #b45309; }
+  .badge-paid { background: #d1fae5; color: #047857; }
+  .badge-processing { background: #e0e7ff; color: #4338ca; }
+  .badge-delivering { background: #fce7f3; color: #be185d; }
+  .badge-completed { background: #ecfdf5; color: #065f46; }
+  .badge-cancelled { background: #fee2e2; color: #b91c1c; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+    vertical-align: middle;
+  }
+  tr:hover td {
+    background: #f8fafc;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background: #ecfdf5; color: #059669;">
+      <i class="fa-solid fa-sack-dollar"></i>
+    </div>
+    <div>
+      <div class="kpi-value">${{ "%.2f"|format(stats.paid_revenue) }}</div>
+      <div class="kpi-label">ចំណូលជាក់ស្តែង (Paid Revenue)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background: #eff6ff; color: #2563eb;">
+      <i class="fa-solid fa-cart-shopping"></i>
+    </div>
+    <div>
+      <div class="kpi-value">{{ stats.paid_orders }} / {{ stats.total_orders }}</div>
+      <div class="kpi-label">បានទូទាត់ / សរុប (Paid / Total)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background: #fef3c7; color: #d97706;">
+      <i class="fa-solid fa-clock"></i>
+    </div>
+    <div>
+      <div class="kpi-value">{{ stats.pending_orders }}</div>
+      <div class="kpi-label">រង់ចាំបង់ប្រាក់ (Pending Orders)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background: #f3e8ff; color: #9333ea;">
+      <i class="fa-solid fa-users"></i>
+    </div>
+    <div>
+      <div class="kpi-value">{{ stats.total_users }}</div>
+      <div class="kpi-label">អតិថិជនសរុប (Total Users)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Orders Table -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-receipt" style="color: var(--primary); margin-right: 6px;"></i>
+      ការកុម្ម៉ង់ចុងក្រោយបង្អស់ (Recent Orders)
+    </div>
+    <a href="/admin/orders" class="btn btn-outline btn-sm">មើលទាំងអស់ (View All) &rarr;</a>
+  </div>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Address</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if recent_orders %}
+          {% for order in recent_orders %}
+          <tr>
+            <td><strong>#{{ order.order_id }}</strong><br><small style="color: #64748b;">{{ order.transaction_id }}</small></td>
+            <td><strong>{{ order.delivery_name }}</strong></td>
+            <td>{{ order.delivery_phone }}</td>
+            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ order.delivery_address }}">
+              {{ order.delivery_address }}
+            </td>
+            <td><strong style="color: #059669;">${{ "%.2f"|format(order.total_amount) }}</strong></td>
+            <td>
+              {% if order.status == 'PAID' %}
+                <span class="badge badge-paid">✅ Paid (ABA)</span>
+              {% elif order.status == 'PENDING' %}
+                <span class="badge badge-pending">⏳ Pending</span>
+              {% elif order.status == 'PROCESSING' %}
+                <span class="badge badge-processing">👨‍🍳 Processing</span>
+              {% elif order.status == 'DELIVERING' %}
+                <span class="badge badge-delivering">🛵 Delivering</span>
+              {% elif order.status == 'COMPLETED' %}
+                <span class="badge badge-completed">🎉 Completed</span>
+              {% else %}
+                <span class="badge badge-cancelled">❌ Cancelled</span>
+              {% endif %}
+            </td>
+            <td style="color: #64748b; font-size: 12px;">{{ order.created_at[:16].replace('T', ' ') }}</td>
+            <td>
+              <a href="/admin/orders" class="btn btn-outline btn-sm">Manage</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px;">
+              មិនទាន់មានការបញ្ជាទិញនៅឡើយទេ (No orders yet)
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

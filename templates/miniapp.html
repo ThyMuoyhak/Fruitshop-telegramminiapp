@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Food Fruit KH — MiniApp Store</title>
+  <!-- Telegram WebApp JS -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Google Fonts: Plus Jakarta Sans & Kantumruy Pro for Khmer -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Anti-Inspect & DevTools Protection -->
+  <script>
+    (function () {
+      'use strict';
+
+      // 1. Disable Right Click Context Menu
+      document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        return false;
+      }, { capture: true });
+
+      // 2. Disable DevTools and Source-Viewing Keyboard Shortcuts
+      document.addEventListener('keydown', function (e) {
+        // F12 key
+        if (e.keyCode === 123 || e.key === 'F12') {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        const key = (e.key || '').toLowerCase();
+
+        // Ctrl+Shift+I (Inspect), Ctrl+Shift+J (Console), Ctrl+Shift+C (Inspect Element)
+        // Ctrl+Shift+K (Firefox Console), Ctrl+Shift+E (Network), Ctrl+Shift+M (Device Mode)
+        if (isCtrlOrCmd && e.shiftKey && ['i', 'j', 'c', 'k', 'e', 'm'].includes(key)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+
+        // Ctrl+U (View Source), Ctrl+S (Save Page), Ctrl+P (Print Page)
+        if (isCtrlOrCmd && ['u', 's', 'p'].includes(key)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }, { capture: true });
+
+      // 3. Disable Dragging of Images & Content
+      document.addEventListener('dragstart', function (e) {
+        e.preventDefault();
+        return false;
+      }, { capture: true });
+
+      // 4. Overwrite Console Methods to Prevent Log Inspection
+      try {
+        const noop = function () {};
+        ['log', 'debug', 'info', 'warn', 'error', 'table', 'dir', 'trace'].forEach(function (method) {
+          console[method] = noop;
+        });
+      } catch (err) {}
+
+      // 5. Anti-Debugging and DevTools Opening Detection
+      let devtoolsOpen = false;
+      function handleDevToolsOpen() {
+        if (devtoolsOpen) return;
+        devtoolsOpen = true;
+        document.body.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#ffffff;font-family:'Plus Jakarta Sans',sans-serif;text-align:center;padding:24px;">
+            <div style="font-size:52px;margin-bottom:16px;">🔒</div>
+            <h2 style="font-size:20px;font-weight:700;margin-bottom:8px;">ការត្រួតពិនិត្យត្រូវបានបិទ (Inspect Disabled)</h2>
+            <p style="color:#94a3b8;font-size:14px;max-width:320px;line-height:1.6;">
+              ដើម្បីសុវត្ថិភាពទិន្នន័យ ឧបករណ៍ Developer Tools ត្រូវបានបិទសម្រាប់ហាងទំនិញនេះ។ សូមបិទ Inspect ដើម្បីបន្តទិញទំនិញ។
+            </p>
+          </div>
+        `;
+      }
+
+      const element = new Image();
+      Object.defineProperty(element, 'id', {
+        get: function () {
+          handleDevToolsOpen();
+        }
+      });
+
+      function detectDevTools() {
+        const threshold = 160;
+        const widthDiff = window.outerWidth - window.innerWidth > threshold;
+        const heightDiff = window.outerHeight - window.innerHeight > threshold;
+        if (widthDiff || heightDiff) {
+          handleDevToolsOpen();
+        }
+        try {
+          console.log(element);
+          console.clear();
+        } catch (e) {}
+      }
+
+      window.addEventListener('resize', detectDevTools);
+      setInterval(detectDevTools, 1500);
+
+      // 6. Debugger Pause Trap
+      setInterval(function () {
+        const startTime = performance.now();
+        debugger;
+        if (performance.now() - startTime > 100) {
+          handleDevToolsOpen();
+        }
+      }, 1000);
+    })();
+  </script>
+
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-light: #d1fae5;
+      --accent: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 30px -4px rgba(0, 0, 0, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Plus Jakarta Sans', 'Kantumruy Pro', sans-serif;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    input, textarea, select {
+      -webkit-user-select: auto !important;
+      -moz-user-select: auto !important;
+      -ms-user-select: auto !important;
+      user-select: auto !important;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 90px;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      font-size: 26px;
+      background: var(--primary-light);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #065f46;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: #f1f5f9;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    /* Search Bar */
+    .search-box {
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      background: #f8fafc;
+      color: var(--text);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Category Filter */
+    .category-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 12px 16px;
+      scrollbar-width: none;
+    }
+
+    .category-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+
+    .cat-pill.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      margin: 4px 16px 16px;
+      background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
+    }
+
+    .hero-banner h2 {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .hero-banner p {
+      font-size: 12px;
+      opacity: 0.9;
+      line-height: 1.4;
+      max-width: 75%;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      margin-top: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-deco {
+      position: absolute;
+      right: 12px;
+      bottom: -6px;
+      font-size: 68px;
+      opacity: 0.85;
+      transform: rotate(10deg);
+    }
+
+    /* Products Grid */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 0 16px 20px;
+    }
+
+    .product-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .product-card:active {
+      transform: scale(0.98);
+    }
+
+    .product-thumb {
+      width: 100%;
+      height: 130px;
+      object-fit: cover;
+      background: #f1f5f9;
+    }
+
+    .product-info {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .product-name-kh {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 2px;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .product-name-en {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .price-row {
+      margin-top: auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+
+    .price-usd {
+      font-size: 15px;
+      font-weight: 800;
+      color: #065f46;
+    }
+
+    .price-khr {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .unit-text {
+      font-size: 10.5px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .add-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+
+    .add-btn:active {
+      transform: scale(0.9);
+      background: var(--primary-dark);
+    }
+
+    .qty-counter {
+      display: flex;
+      align-items: center;
+      background: var(--primary-light);
+      border-radius: 10px;
+      padding: 2px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .qty-counter button {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: white;
+      border: none;
+      color: var(--primary-dark);
+      font-weight: bold;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .qty-counter span {
+      width: 24px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #065f46;
+    }
+
+    /* Floating Cart Bar */
+    .cart-bar {
+      position: fixed;
+      bottom: 12px;
+      left: 14px;
+      right: 14px;
+      background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+      color: white;
+      padding: 12px 18px;
+      border-radius: 18px;
+      box-shadow: 0 10px 25px rgba(6, 95, 70, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 50;
+      transform: translateY(120%);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+    }
+
+    .cart-bar.show {
+      transform: translateY(0);
+    }
+
+    .cart-bar-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cart-bar-badge {
+      background: #f59e0b;
+      color: #000;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+
+    .cart-bar-price {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .cart-bar-khr {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .cart-bar-btn {
+      font-size: 13.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 7px 12px;
+      border-radius: 12px;
+    }
+
+    /* Modal / Drawer */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 90;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .drawer-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 90vh;
+      background: white;
+      border-radius: 24px 24px 0 0;
+      z-index: 100;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .drawer.active {
+      transform: translateY(0);
+    }
+
+    .drawer-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .drawer-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .close-btn {
+      background: #f1f5f9;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .drawer-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    /* Cart Item row */
+    .cart-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cart-item-img {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #f8fafc;
+    }
+
+    .cart-item-details {
+      flex-grow: 1;
+    }
+
+    .cart-item-name {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .cart-item-price {
+      font-size: 12px;
+      color: #065f46;
+      font-weight: 700;
+    }
+
+    /* Checkout Inputs */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #334155;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      outline: none;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .checkout-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .checkout-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Payment Screen Modal */
+    .khqr-card {
+      text-align: center;
+      padding: 15px;
+    }
+
+    .khqr-img-wrap {
+      background: white;
+      padding: 12px;
+      border: 2px dashed #059669;
+      border-radius: 16px;
+      display: inline-block;
+      margin: 10px 0;
+      box-shadow: var(--shadow);
+    }
+
+    .khqr-img {
+      width: 220px;
+      height: 220px;
+      object-fit: contain;
+    }
+
+    .badge-aba {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #004b87;
+      color: white;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .pay-btn-aba {
+      display: block;
+      width: 100%;
+      background: #004b87;
+      color: white;
+      text-decoration: none;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 10px;
+      box-shadow: 0 4px 12px rgba(0, 75, 135, 0.3);
+    }
+
+    .polling-box {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--primary-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Success Checkmark Animation */
+    .success-icon {
+      font-size: 56px;
+      color: var(--primary);
+      margin-bottom: 12px;
+      animation: bounce 0.6s ease;
+    }
+
+    @keyframes bounce {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Sticky Header -->
+  <header class="header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-icon">🍎</div>
+        <div>
+          <div class="brand-title">Food Fruit KH</div>
+          <div class="brand-subtitle">ផ្លែឈើ & អាហារខ្មែរ</div>
+        </div>
+      </div>
+      <div class="user-badge" id="userPill">
+        <i class="fa-solid fa-user-circle"></i>
+        <span id="userName">Customer</span>
+      </div>
+    </div>
+    <!-- Search -->
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input type="text" id="searchInput" placeholder="ស្វែងរកផ្លែឈើ, ទឹកក្រឡុក, អាហារ... (Search)" oninput="filterProducts()" />
+    </div>
+  </header>
+
+  <!-- Categories Horizontal Scroll -->
+  <div class="category-scroll" id="categoryScroll">
+    <div class="cat-pill active" onclick="selectCategory(0, this)">
+      <span>🌟</span> ទាំងអស់ (All)
+    </div>
+  </div>
+
+  <!-- Hero Banner -->
+  <div class="hero-banner">
+    <h2>ផ្លែឈើធម្មជាតិស្រស់ៗ ១០០%</h2>
+    <p>បេះស្រស់ៗពីចម្ការកំពត បាត់ដំបង កំពង់ចាម ដឹកជញ្ជូនរហ័ស & បង់ប្រាក់ KHQR / ABA Pay!</p>
+    <div class="hero-badge">⚡ ដឹកជញ្ជូនទាន់ចិត្ត ភ្នំពេញ & ខេត្ត</div>
+    <div class="hero-deco">🥭</div>
+  </div>
+
+  <!-- Products Grid -->
+  <div class="product-grid" id="productGrid">
+    <!-- Rendered via JS -->
+  </div>
+
+  <!-- Floating Cart Bar -->
+  <div class="cart-bar" id="cartBar" onclick="openCartDrawer()">
+    <div class="cart-bar-info">
+      <span class="cart-bar-badge" id="cartCount">0</span>
+      <div>
+        <div class="cart-bar-price" id="cartTotalUSD">$0.00</div>
+        <div class="cart-bar-khr" id="cartTotalKHR">~ 0 ៛</div>
+      </div>
+    </div>
+    <div class="cart-bar-btn">
+      <span>មើលកន្ត្រក</span>
+      <i class="fa-solid fa-arrow-right"></i>
+    </div>
+  </div>
+
+  <!-- Cart & Checkout Drawer -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeAllDrawers()"></div>
+
+  <div class="drawer" id="cartDrawer">
+    <div class="drawer-header">
+      <div class="drawer-title">🛒 កន្ត្រកទំនិញ (Your Cart)</div>
+      <button class="close-btn" onclick="closeAllDrawers()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="drawer-body">
+      <div id="cartItemsList">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div style="margin: 20px 0 16px; border-top: 1px dashed var(--border); padding-top: 14px;">
+        <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 16px; color: #065f46;">
+          <span>សរុប (Total):</span>
+          <div>
+            <span id="drawerTotalUSD">$0.00</span>
+            <div style="font-size: 11px; color: var(--text-muted); text-align: right;" id="drawerTotalKHR">~ 0 ៛</div>
+          </div>
+        </div>
+      </div>
+
+      <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 10px; color: #334155;">📍 ព័ត៌មានដឹកជញ្ជូន (Delivery Info):</h4>
+
+      <div class="form-group">
+        <label>ឈ្មោះអ្នកទទួល (Recipient Name):</label>
+        <input type="text" id="custName" placeholder="ឈ្មោះរបស់អ្នក" required />
+      </div>
+
+      <div class="form-group">
+        <label>លេខទូរស័ព្ទ (Phone Number):</label>
+        <input type="tel" id="custPhone" placeholder="012 345 678" required />
+      </div>
+
+      <div class="form-group">
+        <label>ទីតាំងដឹកជញ្ជូន (Address):</label>
+        <textarea id="custAddress" rows="2" placeholder="ផ្ទះលេខ, ផ្លូវ, សង្កាត់, ខណ្ឌ ឬខេត្ត" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>ចំណាំបន្ថែម (Note / Optional):</label>
+        <input type="text" id="custNote" placeholder="ឧ: ផ្អែមតិច, ដាក់ម្ទេសច្រើន..." />
+      </div>
+
+      <button class="checkout-btn" onclick="submitOrder()">
+        <i class="fa-solid fa-qrcode"></i>
+        <span>បន្តទូទាត់ប្រាក់ KHQR / ABA Pay</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ABA KHQR Payment Modal Drawer -->
+  <div class="drawer" id="paymentDrawer" style="z-index: 110;">
+    <div class="drawer-header">
+      <div class="drawer-title">🇰🇭 ទូទាត់តាម ABA Pay (KHQR)</div>
+      <button class="close-btn" onclick="closeAllDrawers()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="drawer-body khqr-card">
+      <div class="badge-aba">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>ABA Pay & Bakong Verified</span>
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted);">ស្កេនជាមួយ ABA Mobile ឬកម្មវិធីធនាគារនានា</div>
+
+      <div class="khqr-img-wrap">
+        <img id="khqrImage" class="khqr-img" src="" alt="KHQR Code" />
+      </div>
+
+      <div style="margin-top: 6px;">
+        <div style="font-size: 20px; font-weight: 800; color: #065f46;" id="payAmountUSD">$0.00</div>
+        <div style="font-size: 13px; color: var(--text-muted);" id="payAmountKHR">~ 0 ៛</div>
+      </div>
+
+      <a id="abaDeepLink" class="pay-btn-aba" href="#" target="_blank">
+        <i class="fa-solid fa-mobile-screen"></i> បើកក្នុង ABA Mobile / Checkout Web
+      </a>
+
+      <div class="polling-box" id="pollingBox">
+        <div class="spinner"></div>
+        <span>កំពុងរង់ចាំការទូទាត់ប្រាក់ (Auto Checking)...</span>
+      </div>
+
+      <div id="paymentSuccessView" style="display: none; padding: 20px 0;">
+        <div class="success-icon"><i class="fa-solid fa-circle-check"></i></div>
+        <h3 style="color: #065f46; font-size: 18px; font-weight: 800; margin-bottom: 6px;">ការទូទាត់ជោគជ័យ!</h3>
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+          អរគុណសម្រាប់ការបញ្ជាទិញ! ហាងកំពុងរៀបចំការវេចខ្ចប់ និងដឹកជញ្ជូនជូនលោកអ្នកយ៉ាងយកចិត្តទុកដាក់។
+        </p>
+        <button class="checkout-btn" style="margin-top: 15px;" onclick="finishPayment()">
+          <span>រួចរាល់ (Done)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.initDataUnsafe?.user) {
+        const u = tg.initDataUnsafe.user;
+        document.getElementById('userName').innerText = u.first_name || 'Customer';
+        document.getElementById('custName').value = [u.first_name, u.last_name].filter(Boolean).join(' ');
+      }
+    }
+
+    const KHR_RATE = 4100;
+    let products = [];
+    let categories = [];
+    let selectedCatId = 0;
+    let cart = {}; // { product_id: { product, quantity } }
+    let currentTxId = null;
+    let pollInterval = null;
+
+    // Load initial data
+    async function loadShopData() {
+      try {
+        const [catRes, prodRes] = await Promise.all([
+          fetch('/api/categories').then(r => r.json()),
+          fetch('/api/products').then(r => r.json())
+        ]);
+        categories = catRes;
+        products = prodRes;
+        renderCategories();
+        renderProducts();
+      } catch (err) {
+        console.error('Failed to load shop data:', err);
+      }
+    }
+
+    function renderCategories() {
+      const scroll = document.getElementById('categoryScroll');
+      scroll.innerHTML = `
+        <div class="cat-pill ${selectedCatId === 0 ? 'active' : ''}" onclick="selectCategory(0, this)">
+          <span>🌟</span> ទាំងអស់ (All)
+        </div>
+      `;
+      categories.forEach(c => {
+        const div = document.createElement('div');
+        div.className = `cat-pill ${selectedCatId === c.id ? 'active' : ''}`;
+        div.innerHTML = `<span>${c.icon || '🍎'}</span> ${c.name_kh}`;
+        div.onclick = () => selectCategory(c.id, div);
+        scroll.appendChild(div);
+      });
+    }
+
+    function selectCategory(catId, el) {
+      selectedCatId = catId;
+      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      renderProducts();
+    }
+
+    function filterProducts() {
+      renderProducts();
+    }
+
+    function renderProducts() {
+      const grid = document.getElementById('productGrid');
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      const filtered = products.filter(p => {
+        const matchCat = (selectedCatId === 0 || p.category_id === selectedCatId);
+        const matchQuery = !query ||
+          p.name_kh.toLowerCase().includes(query) ||
+          p.name_en.toLowerCase().includes(query);
+        return matchCat && matchQuery && p.is_available === 1;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px 10px; color: var(--text-muted);">
+            <div style="font-size: 40px; margin-bottom: 8px;">🔍</div>
+            <div style="font-weight: 700;">រកមិនឃើញទំនិញទេ</div>
+            <div style="font-size: 12px;">សូមសាកល្បងពាក្យគន្លឹះផ្សេងទៀត</div>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(p => {
+        const khrPrice = Math.round(p.price * KHR_RATE);
+        const inCart = cart[p.id] ? cart[p.id].quantity : 0;
+
+        return `
+          <div class="product-card">
+            <img class="product-thumb" src="${p.image_url || 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400'}" alt="${p.name_en}" loading="lazy" />
+            <div class="product-info">
+              <div class="product-name-kh">${p.name_kh}</div>
+              <div class="product-name-en">${p.name_en}</div>
+              <div class="price-row">
+                <div>
+                  <div class="price-usd">$${p.price.toFixed(2)}</div>
+                  <div class="price-khr">~ ${khrPrice.toLocaleString()} ៛</div>
+                  <div class="unit-text">/${p.unit}</div>
+                </div>
+
+                ${inCart === 0 ? `
+                  <button class="add-btn" onclick="addToCart(${p.id})">
+                    <i class="fa-solid fa-plus"></i>
+                  </button>
+                ` : `
+                  <div class="qty-counter">
+                    <button onclick="changeQty(${p.id}, -1)">-</button>
+                    <span>${inCart}</span>
+                    <button onclick="changeQty(${p.id}, 1)">+</button>
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addToCart(prodId) {
+      const prod = products.find(p => p.id === prodId);
+      if (!prod) return;
+      if (!cart[prodId]) {
+        cart[prodId] = { product: prod, quantity: 1 };
+      } else {
+        cart[prodId].quantity += 1;
+      }
+      updateCartUI();
+      renderProducts();
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    }
+
+    function changeQty(prodId, delta) {
+      if (!cart[prodId]) return;
+      cart[prodId].quantity += delta;
+      if (cart[prodId].quantity <= 0) {
+        delete cart[prodId];
+      }
+      updateCartUI();
+      renderProducts();
+      renderCartDrawerItems();
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    }
+
+    function updateCartUI() {
+      let count = 0;
+      let totalUSD = 0;
+      Object.values(cart).forEach(item => {
+        count += item.quantity;
+        totalUSD += item.quantity * item.product.price;
+      });
+
+      const totalKHR = Math.round(totalUSD * KHR_RATE);
+
+      document.getElementById('cartCount').innerText = count;
+      document.getElementById('cartTotalUSD').innerText = `$${totalUSD.toFixed(2)}`;
+      document.getElementById('cartTotalKHR').innerText = `~ ${totalKHR.toLocaleString()} ៛`;
+
+      document.getElementById('drawerTotalUSD').innerText = `$${totalUSD.toFixed(2)}`;
+      document.getElementById('drawerTotalKHR').innerText = `~ ${totalKHR.toLocaleString()} ៛`;
+
+      const bar = document.getElementById('cartBar');
+      if (count > 0) {
+        bar.classList.add('show');
+      } else {
+        bar.classList.remove('show');
+        closeAllDrawers();
+      }
+    }
+
+    function openCartDrawer() {
+      renderCartDrawerItems();
+      document.getElementById('drawerOverlay').classList.add('active');
+      document.getElementById('cartDrawer').classList.add('active');
+    }
+
+    function renderCartDrawerItems() {
+      const container = document.getElementById('cartItemsList');
+      const items = Object.values(cart);
+      if (items.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">កន្ត្រកទទេ</div>`;
+        return;
+      }
+
+      container.innerHTML = items.map(i => {
+        const p = i.product;
+        const subtotal = (i.quantity * p.price).toFixed(2);
+        return `
+          <div class="cart-item">
+            <img class="cart-item-img" src="${p.image_url || 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=200'}" />
+            <div class="cart-item-details">
+              <div class="cart-item-name">${p.name_kh}</div>
+              <div class="cart-item-price">$${p.price.toFixed(2)} / ${p.unit} &times; ${i.quantity} = $${subtotal}</div>
+            </div>
+            <div class="qty-counter">
+              <button onclick="changeQty(${p.id}, -1)">-</button>
+              <span>${i.quantity}</span>
+              <button onclick="changeQty(${p.id}, 1)">+</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function closeAllDrawers() {
+      document.getElementById('drawerOverlay').classList.remove('active');
+      document.getElementById('cartDrawer').classList.remove('active');
+      document.getElementById('paymentDrawer').classList.remove('active');
+      if (pollInterval) clearInterval(pollInterval);
+    }
+
+    // Submit Order & Generate KHQR
+    async function submitOrder() {
+      const name = document.getElementById('custName').value.trim();
+      const phone = document.getElementById('custPhone').value.trim();
+      const address = document.getElementById('custAddress').value.trim();
+      const note = document.getElementById('custNote').value.trim();
+
+      if (!name || !phone || !address) {
+        alert('សូមបំពេញឈ្មោះ លេខទូរស័ព្ទ និងអាសយដ្ឋានដឹកជញ្ជូន!');
+        return;
+      }
+
+      const items = Object.values(cart).map(i => ({
+        product_id: i.product.id,
+        quantity: i.quantity
+      }));
+
+      const payload = {
+        user_id: tg?.initDataUnsafe?.user?.id || 0,
+        username: tg?.initDataUnsafe?.user?.username || '',
+        name: name,
+        phone: phone,
+        address: address,
+        note: note,
+        items: items
+      };
+
+      try {
+        const btn = document.querySelector('.checkout-btn');
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> កំពុងបង្កើត KHQR...`;
+
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-qrcode"></i> <span>បន្តទូទាត់ប្រាក់ KHQR / ABA Pay</span>`;
+
+        if (!data.success) {
+          alert('កំហុសក្នុងការបង្កើត QR Code: ' + (data.error || 'Server error'));
+          return;
+        }
+
+        // Show Payment Drawer
+        currentTxId = data.transaction_id;
+        document.getElementById('khqrImage').src = data.qr_url || `/api/qr-image?qr=${encodeURIComponent(data.qr)}`;
+        document.getElementById('payAmountUSD').innerText = `$${parseFloat(data.amount).toFixed(2)}`;
+        const khrAmount = Math.round(parseFloat(data.amount) * KHR_RATE);
+        document.getElementById('payAmountKHR').innerText = `~ ${khrAmount.toLocaleString()} ៛`;
+
+        // Direct ABA Pay Deeplink or checkout web url
+        document.getElementById('abaDeepLink').href = data.checkout_url || '#';
+
+        document.getElementById('cartDrawer').classList.remove('active');
+        document.getElementById('paymentDrawer').classList.add('active');
+        document.getElementById('pollingBox').style.display = 'flex';
+        document.getElementById('paymentSuccessView').style.display = 'none';
+
+        startPaymentPolling(currentTxId);
+      } catch (err) {
+        console.error('Checkout error:', err);
+        alert('មានបញ្ហាបច្ចេកទេសក្នុងការទូទាត់។ សូមសាកល្បងម្ដងទៀត!');
+      }
+    }
+
+    function startPaymentPolling(txId) {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/order/${txId}/status`);
+          const data = await res.json();
+          if (data.status === 'success' || data.status === 'PAID') {
+            clearInterval(pollInterval);
+            showPaymentSuccess();
+          }
+        } catch (e) {
+          console.error('Polling error:', e);
+        }
+      }, 3000);
+    }
+
+    function showPaymentSuccess() {
+      document.getElementById('pollingBox').style.display = 'none';
+      document.getElementById('paymentSuccessView').style.display = 'block';
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+      // Clear Cart
+      cart = {};
+      updateCartUI();
+      renderProducts();
+    }
+
+    function finishPayment() {
+      closeAllDrawers();
+      if (tg) tg.close();
+    }
+
+    // Start
+    loadShopData();
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Environment variables & secrets
+.env
+
+# SQLite Databases
+*.db
+*.sqlite3
+
+# Binaries & Tunnels
+cloudflared.exe
+*.exe
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# IDE / System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

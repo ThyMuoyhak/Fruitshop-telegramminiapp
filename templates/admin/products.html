@@ -1,0 +1,186 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Manage Products — Food Fruit KH Admin{% endblock %}
+{% block page_title %}🍎 គ្រប់គ្រងមុខទំនិញ (Products Management){% endblock %}
+
+{% block extra_head %}
+<style>
+  .product-thumb-sm {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+  }
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-search {
+    flex-grow: 1;
+    max-width: 320px;
+    position: relative;
+  }
+  .filter-search input {
+    width: 100%;
+    padding: 9px 14px 9px 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13.5px;
+    outline: none;
+  }
+  .filter-search i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+  }
+  .toggle-btn {
+    border: none;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-in-stock {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .toggle-out-stock {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if message %}
+<div class="alert alert-success">
+  <i class="fa-solid fa-circle-check"></i>
+  <span>{{ message }}</span>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <div class="filter-bar" style="margin-bottom: 0; width: 100%;">
+      <div class="filter-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="prodSearch" placeholder="ស្វែងរកទំនិញ... (Search product)" onkeyup="searchTable()" />
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <select id="catFilter" class="btn btn-outline btn-sm" onchange="filterCategory()">
+          <option value="ALL">📁 គ្រប់ប្រភេទទាំងអស់ (All Categories)</option>
+          {% for cat in categories %}
+          <option value="{{ cat.name_en }}">{{ cat.icon }} {{ cat.name_kh }}</option>
+          {% endfor %}
+        </select>
+
+        <a href="/admin/products/new" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-plus"></i> បន្ថែមទំនិញថ្មី (Add Product)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table id="productsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Photo</th>
+          <th>ឈ្មោះទំនិញ (Name)</th>
+          <th>ប្រភេទ (Category)</th>
+          <th>តម្លៃ (Price)</th>
+          <th>ខ្នាត (Unit)</th>
+          <th>ស្តុក (Stock Status)</th>
+          <th style="text-align: right;">សកម្មភាព (Actions)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for prod in products %}
+        <tr data-category="{{ prod.category_name }}">
+          <td>#{{ prod.id }}</td>
+          <td>
+            <img class="product-thumb-sm" src="{{ prod.image_url or 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=200' }}" alt="{{ prod.name_en }}" />
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #0f172a;">{{ prod.name_kh }}</div>
+            <div style="font-size: 11px; color: #64748b;">{{ prod.name_en }}</div>
+          </td>
+          <td>
+            <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+              {{ prod.category_name }}
+            </span>
+          </td>
+          <td>
+            <strong style="color: #065f46; font-size: 14.5px;">${{ "%.2f"|format(prod.price) }}</strong>
+            <div style="font-size: 10.5px; color: #64748b;">~ {{ "{:,}".format((prod.price * 4100)|int) }} ៛</div>
+          </td>
+          <td style="color: #475569; font-weight: 600;">{{ prod.unit }}</td>
+          <td>
+            <form action="/admin/products/toggle/{{ prod.id }}" method="POST" style="display: inline;">
+              {% if prod.is_available == 1 %}
+                <button type="submit" class="toggle-btn toggle-in-stock" title="Click to toggle stock">
+                  <i class="fa-solid fa-check"></i> មានក្នុងស្តុក
+                </button>
+              {% else %}
+                <button type="submit" class="toggle-btn toggle-out-stock" title="Click to toggle stock">
+                  <i class="fa-solid fa-xmark"></i> ដាច់ស្តុក
+                </button>
+              {% endif %}
+            </form>
+          </td>
+          <td style="text-align: right;">
+            <a href="/admin/products/edit/{{ prod.id }}" class="btn btn-outline btn-sm" title="Edit">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+            <form action="/admin/products/delete/{{ prod.id }}" method="POST" style="display: inline;" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបទំនិញនេះមែនទេ?');">
+              <button type="submit" class="btn btn-danger btn-sm" title="Delete">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function searchTable() {
+    const input = document.getElementById('prodSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#productsTable tbody tr');
+    rows.forEach(r => {
+      const text = r.innerText.toLowerCase();
+      r.style.display = text.includes(input) ? '' : 'none';
+    });
+  }
+
+  function filterCategory() {
+    const selected = document.getElementById('catFilter').value;
+    const rows = document.querySelectorAll('#productsTable tbody tr');
+    rows.forEach(r => {
+      if (selected === 'ALL' || r.getAttribute('data-category') === selected) {
+        r.style.display = '';
+      } else {
+        r.style.display = 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}

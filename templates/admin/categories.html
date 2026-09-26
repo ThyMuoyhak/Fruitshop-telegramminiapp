@@ -1,0 +1,105 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Categories — Food Fruit KH Admin{% endblock %}
+{% block page_title %}📂 គ្រប់គ្រងប្រភេទមុខទំនិញ (Categories){% endblock %}
+
+{% block extra_head %}
+<style>
+  .cat-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 860px) {
+    .cat-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if message %}
+<div class="alert alert-success">
+  <i class="fa-solid fa-circle-check"></i>
+  <span>{{ message }}</span>
+</div>
+{% endif %}
+
+<div class="cat-layout">
+  <!-- Categories List -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">បញ្ជីប្រភេទទាំងអស់ (Category List)</div>
+    </div>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Icon</th>
+            <th>ឈ្មោះជាភាសាខ្មែរ (Khmer)</th>
+            <th>ឈ្មោះជាអង់គ្លេស (English)</th>
+            <th>Sort Order</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cat in categories %}
+          <tr>
+            <td>#{{ cat.id }}</td>
+            <td style="font-size: 24px;">{{ cat.icon }}</td>
+            <td><strong>{{ cat.name_kh }}</strong></td>
+            <td style="color: #64748b;">{{ cat.name_en }}</td>
+            <td>{{ cat.sort_order }}</td>
+            <td style="text-align: right;">
+              <form action="/admin/categories/delete/{{ cat.id }}" method="POST" style="display: inline;" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបប្រភេទនេះមែនទេ?');">
+                <button type="submit" class="btn btn-danger btn-sm" title="Delete">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add Category Form -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">➕ បន្ថែមប្រភេទថ្មី (Add Category)</div>
+    </div>
+    <div class="card-body">
+      <form action="/admin/categories/new" method="POST">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px;">Icon (Emoji):</label>
+          <input type="text" name="icon" class="btn btn-outline" style="width: 100%; text-align: left;" value="🍎" required />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px;">ឈ្មោះជាភាសាខ្មែរ (Khmer):</label>
+          <input type="text" name="name_kh" class="btn btn-outline" style="width: 100%; text-align: left;" placeholder="ឧ: ផ្លែឈើស្រស់ខ្មែរ" required />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px;">ឈ្មោះជាភាសាអង់គ្លេស (English):</label>
+          <input type="text" name="name_en" class="btn btn-outline" style="width: 100%; text-align: left;" placeholder="e.g. Fresh Khmer Fruits" required />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 18px;">
+          <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px;">លំដាប់បង្ហាញ (Sort Order):</label>
+          <input type="number" name="sort_order" class="btn btn-outline" style="width: 100%; text-align: left;" value="0" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+          <i class="fa-solid fa-plus"></i> បន្ថែមប្រភេទ (Add)
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
