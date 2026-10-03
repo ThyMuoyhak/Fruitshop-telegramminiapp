@@ -1,166 +1,114 @@
-# 🍎 Food Fruit KH — Telegram Bot, MiniApp & FastAPI MVT Admin Dashboard
+# 🥗 Food Fruit KH — Decoupled 3-Project Monorepo
 
-A unified e-commerce platform for fresh Cambodian fruits, snacks, and juices, featuring:
-1. 🛍️ **Telegram MiniApp (Mini Shop)**: Embedded mobile web app inside Telegram.
-2. 🤖 **Telegram Bot**: Conversational ordering, automated notifications & payment polling.
-3. ⚙️ **FastAPI + SQLite MVT Admin Dashboard**: Full product CRUD, image upload, stock toggling, and order management.
-4. 🇰🇭 **ABA Pay & KHQR Integration**: Powered by AnajakPay KHQRcc gateway.
+Welcome to the decoupled **Food Fruit KH** platform! The system has been modularized into **3 standalone projects** so you can develop, deploy, and host each part on its own domain or service without coupling:
+
+```
+Food KH/
+├── backend/            👉 Standalone Backend (FastAPI, SQLite, Telegram Bot, AnajakPay KHQR)
+├── frontend_admin/     👉 Standalone Admin Dashboard (React.js, TailwindCSS v3, Vite)
+├── frontend_miniapp/   👉 Standalone Telegram MiniApp (HTML5, Vanilla CSS, JS, Telegram WebApp SDK)
+```
 
 ---
 
-## 🌟 Architecture Overview
+## 🏗️ 3 Independent Projects Overview
 
 ```
                       +---------------------------------------+
                       |   Telegram Client (Mobile / Desktop)  |
                       +---------------------------------------+
                                    |               |
-                         /start & bot text   MiniApp WebApp
-                                   |               |
-                                   v               v
-            +---------------------------+     +-------------------------------+
-            |  Telegram Bot (bot.py)    |     | FastAPI Server (server.py)    |
-            |  python-telegram-bot v21  |     | - MiniApp: /shop              |
-            +---------------------------+     | - Admin MVT: /admin           |
-                         \                    | - JSON APIs: /api/*           |
-                          \                   +-------------------------------+
-                           \                                  /
-                            v                                v
-                  +---------------------------------------------------+
-                  |         Shared SQLite Database (food_kh.db)       |
-                  |     - Users, Products, Categories, Orders         |
-                  +---------------------------------------------------+
-                                            |
-                                            v
-                  +---------------------------------------------------+
-                  |    AnajakPay KHQRcc Gateway (ABA Pay / Bakong)    |
-                  |  - Direct QR API & Polling Verification V2        |
-                  +---------------------------------------------------+
+                         Telegram Bot Polling      |
+                                   |               v
+                                   |      +---------------------------------+
+                                   |      | frontend_miniapp/               |
+                                   |      | (Telegram MiniApp Store)        |
+                                   |      | Hosted on Vercel / GitHub Pages |
+                                   |      +---------------------------------+
+                                   |                       |
+                                   v                       v (REST Calls)
+  +---------------------------------------------------------------------------------+
+  | backend/ (FastAPI + SQLite + Telegram Bot Worker)                               |
+  | - CORS Enabled for all origins & ports                                          |
+  | - Rest APIs: /api/products, /api/categories, /api/orders, /api/checkout, etc.   |
+  | - AnajakPay KHQR Payment Processing & Live Polling                              |
+  +---------------------------------------------------------------------------------+
+                                   ^
+                                   | (REST API & Token Auth)
+                                   |
+                  +---------------------------------+
+                  | frontend_admin/                 |
+                  | (React.js + TailwindCSS Admin)  |
+                  | Merchant Inventory & Orders     |
+                  +---------------------------------+
 ```
 
 ---
 
-## 🚀 Key Features
-
-### 1. 🛍️ Telegram MiniApp Store (`/shop`)
-- **Direct Launch**: Tapping **"🛍️ បើកហាងទំនិញ / Open Shop"** opens the MiniApp directly inside Telegram.
-- **Modern UI**: Tailored with Khmer and English typography (`Kantumruy Pro` & `Plus Jakarta Sans`).
-- **Interactive Shopping**:
-  - Filter by Categories: Fresh Fruits, Dried Fruits, Juices & Smoothies, KH Snacks, Gift Baskets.
-  - Real-time product search.
-  - Slide-up Cart Drawer with live subtotal calculation in USD ($) and KHR (៛).
-- **One-Tap KHQR & ABA Pay Checkout**:
-  - Auto-fills user details from Telegram profile (`initDataUnsafe.user`).
-  - Calls `/api/checkout` to generate live KHQR code.
-  - One-tap button: **Open in ABA Mobile**.
-  - Automatic background polling every 3 seconds — detects payment immediately and displays celebratory confirmation 🎉!
-
----
-
-### 2. ⚙️ FastAPI + SQLite MVT Admin Dashboard (`/admin`)
-Access via browser at: **`http://localhost:8000/admin`**
-- **Default Credentials**:
-  - Username: `admin`
-  - Password: `foodkh2026` *(Configurable in `.env`)*
-- **Dashboard Overview**:
-  - Real-time KPI statistics: Paid Revenue, Total Orders, Pending Orders, Total Users.
-  - Recent orders table with customer info and quick status links.
-- **Product Management (`/admin/products`)**:
-  - Table of all products with image preview, names, prices ($ & ៛), and unit.
-  - **1-Click Stock Toggle**: Switch products between `✅ មានក្នុងស្តុក (In Stock)` and `❌ ដាច់ស្តុក (Out of Stock)`.
-  - **Add New Product (`/admin/products/new`)**:
-    - Category selection.
-    - Bilingual Name (Khmer & English) and Descriptions.
-    - Price in USD and Unit.
-    - Image URL or Direct File Upload (saved to `static/uploads/`).
-    - Live image preview.
-  - **Edit Product (`/admin/products/edit/{id}`)**: Update any field or image.
-  - **Delete Product**: With confirmation safety check.
-- **Category Management (`/admin/categories`)**:
-  - View all categories with icons and sort order.
-  - Add new categories.
-- **Order Management (`/admin/orders`)**:
-  - Filter orders by: `PENDING`, `PAID`, `PROCESSING`, `DELIVERING`, `COMPLETED`, `CANCELLED`.
-  - Detailed breakdown of customer name, phone, delivery address, and ordered items.
-  - 1-click status update.
-
----
-
-### 3. 🤖 Telegram Bot Features (`@foodkhtestingbot`)
-- **Chat Menu Button**: Permanent **🛍️ Shop** menu button in Telegram.
-- **Chat Store**: Full catalog browsing and ordering directly inside chat conversation.
-- **Admin Alerts**: Instant notifications sent to Thy Muoyhak (`1667587449`) when:
-  - An order is placed (Pending)
-  - An order is paid via ABA Mobile (Paid)
-
----
-
-## 📁 Directory Structure
-
-```
-d:/Food KH/
-├── config.py                 # Configuration & Environment Variables
-├── database.py               # SQLite Schema, Queries & CRUD Helpers
-├── payment.py                # AnajakPay KHQRcc Client & Verification
-├── keyboards.py              # Telegram Keyboards with MiniApp Support
-├── server.py                 # FastAPI Web Server (MiniApp + Admin Dashboard + APIs)
-├── bot.py                    # Telegram Bot Application
-├── run_all.py                # Unified Runner (Runs Server + Bot Concurrently)
-├── run_bot.bat               # Windows 1-Click Launch Script
-├── requirements.txt          # Python Dependencies
-├── .env                      # Credentials & Configuration
-├── static/
-│   ├── uploads/              # Uploaded product images
-│   ├── css/                  # Custom CSS styles
-│   └── js/                   # Custom JavaScript
-└── templates/
-    ├── miniapp.html          # Telegram MiniApp Frontend Store
-    └── admin/
-        ├── base.html         # Admin Layout Template
-        ├── dashboard.html    # Analytics & Recent Orders
-        ├── products.html     # Products Table with Stock Toggles
-        ├── product_form.html # Add & Edit Product Form
-        ├── categories.html   # Category Management
-        ├── orders.html       # Orders Management
-        └── login.html        # Admin Login Page
-```
-
----
-
-## 🏃 Running the Application
-
-### Option A: One-Click Runner (Recommended)
-Double-click [`run_bot.bat`](file:///d:/Food%20KH/run_bot.bat) on Windows, or run:
-```bash
-python run_all.py
-```
-This automatically starts both:
-- **FastAPI Web Server** at `http://localhost:8000`
-- **Telegram Bot** polling `@foodkhtestingbot`
-
-### Option B: Running Separately
-- **Web Server Only**:
+## 📁 1. `backend/` — FastAPI REST API & Telegram Bot
+- **Technology**: Python 3, FastAPI, Uvicorn, SQLite3, `python-telegram-bot` v21, AnajakPay.
+- **Port**: `8000` (or dynamic `$PORT` on Render).
+- **CORS**: Fully enabled for all external domains.
+- **How to Run**:
   ```bash
-  python server.py
+  cd backend
+  pip install -r requirements.txt
+  python bot_worker.py    # Runs both FastAPI and Bot in one process
+  # Or: python main.py    # Runs only the FastAPI REST API
   ```
-- **Telegram Bot Only**:
-  ```bash
-  python bot.py
-  ```
+- **Documentation**: See [backend/README.md](file:///d:/Food%20KH/backend/README.md).
 
 ---
 
-## 📱 Testing MiniApp in Telegram Mobile (HTTPS Requirement)
+## 💻 2. `frontend_admin/` — React.js + TailwindCSS Dashboard
+- **Technology**: React 19, TailwindCSS v3, Vite, Lucide React.
+- **Port**: `5173`.
+- **Key Features**:
+  - Full Product CRUD with bilingual (Khmer & English) support.
+  - Active stock toggle & image upload.
+  - Category manager with custom emoji icons.
+  - Live order monitoring with status badge filters and receipt modals.
+  - Revenue analytics in USD ($) and KHR (៛).
+  - Configurable Backend Host in UI Settings.
+- **How to Run**:
+  ```bash
+  cd frontend_admin
+  npm install
+  npm run dev            # Development server on http://localhost:5173
+  npm run build          # Production static bundle in dist/
+  ```
+- **Documentation**: See [frontend_admin/README.md](file:///d:/Food%20KH/frontend_admin/README.md).
 
-Telegram requires an **HTTPS** URL for MiniApps to open inside the Telegram mobile app.
-To expose your local server with free HTTPS in 10 seconds:
+---
 
-**Using Localtunnel (already installed via npx):**
-```bash
-npx localtunnel --port 8000
-```
-Copy the generated `https://xxxx.loca.lt` URL, open `.env` or `config.py` and set:
-```env
-WEBAPP_URL=https://xxxx.loca.lt/shop
-```
-Restart `run_all.py`, and your Telegram Bot will open the MiniApp in full-screen on any smartphone!
+## 📱 3. `frontend_miniapp/` — Customer Telegram MiniApp
+- **Technology**: Modern HTML5, Custom CSS, Vanilla JavaScript, Telegram WebApp SDK.
+- **Key Features**:
+  - Anti-Inspect security (DevTools disabling, right-click protection).
+  - Category filtering & instant search.
+  - Slide-up cart drawer & Khmer typography.
+  - KHQR EMV QR Code display & automatic 3-second payment polling.
+  - Direct ABA Mobile deeplink button.
+- **How to Run**:
+  ```bash
+  cd frontend_miniapp
+  python -m http.server 5000   # Or npx serve .
+  ```
+- **Documentation**: See [frontend_miniapp/README.md](file:///d:/Food%20KH/frontend_miniapp/README.md).
+
+---
+
+## ⚡ Quick Deployment Guide
+
+| Project | Recommended Platform | Build / Start Command | Notes |
+|---|---|---|---|
+| **`backend/`** | [Render](https://render.com) (Web Service) | `pip install -r backend/requirements.txt`<br>Start: `python backend/bot_worker.py` | Add Persistent Disk at `/var/data` for SQLite & images |
+| **`frontend_admin/`** | [Vercel](https://vercel.com) or [Netlify](https://netlify.com) | `npm run build`<br>Output: `dist` | Set root to `frontend_admin` |
+| **`frontend_miniapp/`** | [GitHub Pages](https://pages.github.com) or [Cloudflare Pages](https://pages.cloudflare.com) | Static (no build step needed) | Set URL in [@BotFather](https://t.me/botfather) Menu Button |
+
+---
+
+## 🔐 Default Credentials
+- **Admin Username**: `admin`
+- **Admin Password**: `foodkh2026`
+- **Telegram Bot**: `@foodkhtestingbot`

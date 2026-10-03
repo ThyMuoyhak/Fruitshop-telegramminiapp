@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Food Fruit KH — MiniApp Store</title>
+  
+  <!-- Telegram WebApp JS -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- Anti-Inspect Protection Script -->
+  <script>
+    (function () {
+      'use strict';
+      // Disable Right Click
+      document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        return false;
+      }, { capture: true });
+
+      // Disable DevTools Keyboard Shortcuts
+      document.addEventListener('keydown', function (e) {
+        if (e.keyCode === 123 || e.key === 'F12') {
+          e.preventDefault();
+          return false;
+        }
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        const key = (e.key || '').toLowerCase();
+        if (isCtrlOrCmd && e.shiftKey && ['i', 'j', 'c', 'k', 'e', 'm'].includes(key)) {
+          e.preventDefault();
+          return false;
+        }
+        if (isCtrlOrCmd && ['u', 's', 'p'].includes(key)) {
+          e.preventDefault();
+          return false;
+        }
+      }, { capture: true });
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header class="app-header">
+    <div class="brand-bar">
+      <div class="brand-title">
+        <div class="brand-icon">🥗</div>
+        <div class="brand-text">
+          <h1>Food Fruit KH <span class="brand-badge">MiniApp</span></h1>
+          <p>ហាងម្ហូបអាហារ និងផ្លែឈើស្រស់ៗ</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Input -->
+    <div class="search-wrapper">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input 
+        type="text" 
+        id="searchInput" 
+        class="search-input" 
+        placeholder="ស្វែងរកម្ហូបអាហារ ឬផ្លែឈើ..." 
+      />
+    </div>
+  </header>
+
+  <!-- Category Filter Scroller -->
+  <div class="category-scroller" id="categoryScroller">
+    <!-- Populated by app.js -->
+  </div>
+
+  <!-- Product Grid -->
+  <main class="product-grid" id="productGrid">
+    <!-- Populated by app.js -->
+  </main>
+
+  <!-- Floating Bottom Cart Bar -->
+  <div class="cart-floating-bar" id="cartFloatingBar" onclick="window.openCartDrawer()">
+    <div class="cart-bar-left">
+      <div class="cart-badge" id="cartBadge">0</div>
+      <div class="cart-total-text">
+        <span class="cart-total-usd" id="cartTotalUSD">$0.00</span>
+        <span class="cart-total-khr" id="cartTotalKHR">~ 0 ៛</span>
+      </div>
+    </div>
+    <div class="cart-bar-right">
+      <span>មើលកន្ត្រកទំនិញ</span>
+      <i class="fa-solid fa-chevron-right"></i>
+    </div>
+  </div>
+
+  <!-- Drawer Overlay -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="window.closeAllDrawers()"></div>
+
+  <!-- Cart & Checkout Drawer -->
+  <div class="drawer" id="cartDrawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">
+      <h3>🛒 កន្ត្រកទំនិញរបស់អ្នក</h3>
+      <button class="close-btn" onclick="window.closeAllDrawers()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Items List -->
+    <div class="cart-items-list" id="cartItemsList">
+      <!-- Populated by app.js -->
+    </div>
+
+    <!-- Total Display -->
+    <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 13px; color: var(--text-muted);">សរុបទាំងអស់:</span>
+      <div style="text-align: right;">
+        <div style="font-size: 18px; font-weight: 800; color: #34d399;" id="drawerTotalUSD">$0.00</div>
+        <div style="font-size: 11px; color: var(--text-muted);" id="drawerTotalKHR">~ 0 ៛</div>
+      </div>
+    </div>
+
+    <!-- Customer Details Form -->
+    <div style="margin-bottom: 12px;">
+      <h4 style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 10px;">
+        📍 ព័ត៌មានដឹកជញ្ជូន
+      </h4>
+
+      <div class="form-group">
+        <label class="form-label">ឈ្មោះអ្នកទទួល *</label>
+        <input type="text" id="custName" class="form-input" placeholder="ឧ. សុខ វិសាល" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">លេខទូរស័ព្ទ *</label>
+        <input type="tel" id="custPhone" class="form-input" placeholder="ឧ. 012 345 678" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">អាសយដ្ឋានដឹកជញ្ជូន *</label>
+        <input type="text" id="custAddress" class="form-input" placeholder="ផ្ទះលេខ ផ្លូវ សង្កាត់ ខណ្ឌ..." />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ចំណាំផ្សេងៗ (បើមាន)</label>
+        <input type="text" id="custNote" class="form-input" placeholder="ឧ. កុំដាក់ស្ករច្រើន ឬផ្ញើលឿន..." />
+      </div>
+
+      <button class="checkout-btn" id="checkoutBtn" onclick="window.submitCheckout()">
+        <i class="fa-solid fa-qrcode"></i>
+        <span>បន្តទូទាត់ប្រាក់ KHQR / ABA Pay</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KHQR Payment Drawer -->
+  <div class="drawer" id="paymentDrawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">
+      <h3>💳 ទូទាត់ប្រាក់ KHQR</h3>
+      <button class="close-btn" onclick="window.closeAllDrawers()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="khqr-container">
+      <div class="khqr-badge">KHQR &bull; ABA PAY</div>
+
+      <div class="khqr-card">
+        <img id="khqrImage" src="" alt="KHQR Code" />
+      </div>
+
+      <div class="khqr-amount-usd" id="payAmountUSD">$0.00</div>
+      <div class="khqr-amount-khr" id="payAmountKHR">~ 0 ៛</div>
+
+      <div class="polling-indicator" id="pollingBox">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span>រង់ចាំការទូទាត់ប្រាក់ពីធនាគារ...</span>
+      </div>
+
+      <a id="abaDeepLink" href="#" target="_blank" class="aba-pay-btn">
+        <i class="fa-solid fa-mobile-screen"></i>
+        <span>ចុចទីនេះដើម្បីទូទាត់តាម ABA Mobile</span>
+      </a>
+
+      <!-- Payment Success Celebration -->
+      <div id="paymentSuccessView" style="display: none; padding: 20px 0;">
+        <div style="font-size: 54px; color: #10b981; margin-bottom: 8px;">🎉</div>
+        <h4 style="font-size: 18px; font-weight: 800; color: #fff;">ទូទាត់ជោគជ័យ!</h4>
+        <p style="font-size: 13px; color: #94a3b8; margin: 6px 0 16px;">
+          ការកុម្ម៉ង់របស់អ្នកត្រូវបានកត់ត្រា និងកំពុងរៀបចំជូន។
+        </p>
+        <button class="checkout-btn" onclick="window.finishOrder()">
+          <i class="fa-solid fa-check"></i>
+          <span>រួចរាល់ (បិទ)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

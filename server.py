@@ -17,6 +17,7 @@ from fastapi import FastAPI, Request, Form, UploadFile, File, Response, Depends,
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import config
@@ -32,6 +33,15 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url=None
+)
+
+# Enable CORS for React Admin and MiniApp on separate origins/ports
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Ensure required directories exist
@@ -133,6 +143,68 @@ async def shop_miniapp(request: Request):
     """
     return templates.TemplateResponse(request=request, name="miniapp.html")
 
+# --- Helper Serializers for React Admin & MiniApp ---
+def serialize_product(p: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": p["id"],
+        "category_id": p["category_id"],
+        "name": p["name_en"],
+        "name_en": p["name_en"],
+        "name_kh": p["name_kh"],
+        "description": p.get("description_en") or "",
+        "description_en": p.get("description_en") or "",
+        "description_kh": p.get("description_kh") or "",
+        "price": p["price"],
+        "price_usd": p["price"],
+        "price_khr": int(p["price"] * 4100),
+        "unit": p.get("unit") or "item",
+        "image_url": p.get("image_url") or "",
+        "is_available": p.get("is_available") == 1,
+        "is_active": p.get("is_available") == 1,
+        "category_name": p.get("category_name") or "",
+    }
+
+def serialize_category(c: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": c["id"],
+        "name": c["name_en"],
+        "name_en": c["name_en"],
+        "name_kh": c["name_kh"],
+        "icon": c.get("icon") or "🍎",
+        "sort_order": c.get("sort_order") or 0,
+    }
+
+def serialize_order(o: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": o["order_id"],
+        "order_id": o["order_id"],
+        "transaction_id": o["transaction_id"],
+        "telegram_user_id": o.get("user_id"),
+        "customer_name": o.get("delivery_name") or f"Customer #{o.get('user_id')}",
+        "customer_phone": o.get("delivery_phone") or "",
+        "delivery_address": o.get("delivery_address") or "",
+        "notes": o.get("delivery_note") or "",
+        "total_usd": o["total_amount"],
+        "total_khr": int(o["total_amount"] * 4100),
+        "payment_method": "KHQR",
+        "status": (o.get("status") or "PENDING").lower(),
+        "created_at": o.get("created_at") or "",
+        "paid_at": o.get("paid_at") or "",
+        "items": [
+            {
+                "product_id": itm.get("product_id"),
+                "product_name": itm.get("product_name"),
+                "name": itm.get("product_name"),
+                "unit": itm.get("unit"),
+                "price": itm.get("price"),
+                "price_usd": itm.get("price"),
+                "quantity": itm.get("quantity"),
+                "subtotal": itm.get("subtotal")
+            }
+            for itm in o.get("items", [])
+        ]
+    }
+
 # ==========================================
 # 2. MiniApp API Endpoints
 # ==========================================
@@ -140,7 +212,7 @@ async def shop_miniapp(request: Request):
 @app.get("/api/categories")
 async def api_get_categories():
     categories = database.get_categories()
-    return JSONResponse(categories)
+    return JSONResponse([serialize_category(c) for c in categories])
 
 @app.get("/api/products")
 async def api_get_products(category_id: Optional[int] = None):
@@ -148,7 +220,7 @@ async def api_get_products(category_id: Optional[int] = None):
         products = database.get_products_by_category(category_id, only_available=False)
     else:
         products = database.get_all_products()
-    return JSONResponse(products)
+    return JSONResponse([serialize_product(p) for p in products])
 
 @app.get("/api/qr-image")
 async def api_qr_image(qr: str):
@@ -279,6 +351,186 @@ async def api_order_status(tx_id: str):
         return JSONResponse({"status": "success"})
 
     return JSONResponse({"status": "pending"})
+
+# ==========================================
+# 2.5 REST API Endpoints for React Admin Portal
+# ==========================================
+
+class RestLoginSchema(BaseModel):
+    username: str
+    password: str
+
+@app.post("/api/auth/login")
+async def rest_api_login(request: Request, creds: RestLoginSchema):
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_login_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Too many attempts. Please try again later.")
+
+    if creds.username == config.ADMIN_USERNAME and creds.password == config.ADMIN_PASSWORD:
+        return {
+            "token": config.ADMIN_PASSWORD,
+            "username": config.ADMIN_USERNAME,
+            "role": "admin"
+        }
+    raise HTTPException(status_code=401, detail="Invalid username or password.")
+
+@app.get("/api/auth/me")
+async def rest_api_auth_me(request: Request):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return {
+        "username": config.ADMIN_USERNAME,
+        "role": "admin",
+        "status": "authenticated"
+    }
+
+@app.post("/api/auth/logout")
+async def rest_api_logout():
+    return {"success": True}
+
+@app.get("/api/admin/stats")
+async def rest_api_admin_stats(request: Request):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    stats = database.get_sales_stats()
+    products = database.get_all_products()
+    return {
+        "total_revenue_usd": stats["paid_revenue"],
+        "total_revenue_khr": int(stats["paid_revenue"] * 4100),
+        "total_orders": stats["total_orders"],
+        "pending_orders": stats["pending_orders"],
+        "total_products": len(products),
+        "total_users": stats.get("total_users", 0)
+    }
+
+class RestProductCreateSchema(BaseModel):
+    name: str
+    name_kh: str
+    category_id: Optional[int] = None
+    price_usd: float
+    price_khr: Optional[int] = None
+    unit: Optional[str] = "item"
+    description: Optional[str] = ""
+    description_kh: Optional[str] = ""
+    image_url: Optional[str] = ""
+    is_active: Optional[bool] = True
+
+@app.post("/api/products")
+async def rest_api_create_product(request: Request, data: RestProductCreateSchema):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    new_id = database.add_product(
+        category_id=data.category_id or 1,
+        name_en=data.name,
+        name_kh=data.name_kh,
+        description_en=data.description or "",
+        description_kh=data.description_kh or "",
+        price=data.price_usd,
+        unit=data.unit or "item",
+        image_url=data.image_url or "",
+        is_available=1 if data.is_active else 0
+    )
+    prod = database.get_product(new_id)
+    return serialize_product(prod) if prod else {"id": new_id}
+
+@app.put("/api/products/{product_id}")
+async def rest_api_update_product(request: Request, product_id: int, data: RestProductCreateSchema):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    updated = database.update_product(
+        product_id=product_id,
+        category_id=data.category_id or 1,
+        name_en=data.name,
+        name_kh=data.name_kh,
+        description_en=data.description or "",
+        description_kh=data.description_kh or "",
+        price=data.price_usd,
+        unit=data.unit or "item",
+        image_url=data.image_url or "",
+        is_available=1 if data.is_active else 0
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Product not found")
+    prod = database.get_product(product_id)
+    return serialize_product(prod) if prod else {"id": product_id}
+
+@app.patch("/api/products/{product_id}/toggle")
+async def rest_api_toggle_product(request: Request, product_id: int):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    database.toggle_product_availability(product_id)
+    return {"success": True}
+
+@app.delete("/api/products/{product_id}")
+async def rest_api_delete_product(request: Request, product_id: int):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    database.delete_product(product_id)
+    return {"success": True}
+
+class RestCategoryCreateSchema(BaseModel):
+    name: str
+    name_kh: Optional[str] = ""
+    icon: Optional[str] = "🍎"
+    sort_order: Optional[int] = 0
+
+@app.post("/api/categories")
+async def rest_api_create_category(request: Request, data: RestCategoryCreateSchema):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    new_id = database.add_category(
+        name_en=data.name,
+        name_kh=data.name_kh or data.name,
+        icon=data.icon or "📁",
+        sort_order=data.sort_order or 0
+    )
+    cat = database.get_category(new_id)
+    return serialize_category(cat) if cat else {"id": new_id}
+
+@app.delete("/api/categories/{category_id}")
+async def rest_api_delete_category(request: Request, category_id: int):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    deleted = database.delete_category(category_id)
+    if not deleted:
+        raise HTTPException(status_code=400, detail="Cannot delete category containing products.")
+    return {"success": True}
+
+@app.get("/api/orders")
+async def rest_api_get_orders(status: Optional[str] = None):
+    raw = database.get_all_orders(status_filter=status.upper() if status else None, limit=100)
+    return [serialize_order(o) for o in raw]
+
+class RestOrderStatusSchema(BaseModel):
+    status: str
+
+@app.patch("/api/orders/{order_id}/status")
+async def rest_api_update_order_status(request: Request, order_id: int, data: RestOrderStatusSchema):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    order = database.get_order_by_id(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    database.update_order_status(order["transaction_id"], data.status.upper())
+    return {"success": True, "status": data.status.lower()}
+
+@app.post("/api/upload")
+async def rest_api_upload_file(request: Request, file: UploadFile = File(...)):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file selected")
+
+    clean_filename = f"{int(time.time())}_{os.path.basename(file.filename).replace(' ', '_')}"
+    filepath = os.path.join(config.UPLOAD_DIR, clean_filename)
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    return {
+        "success": True,
+        "filename": clean_filename,
+        "url": f"/static/uploads/{clean_filename}"
+    }
 
 # ==========================================
 # 3. FastAPI MVT Admin Dashboard Routes
