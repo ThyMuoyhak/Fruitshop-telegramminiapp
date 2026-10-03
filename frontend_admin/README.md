@@ -1,6 +1,6 @@
-# Food KH — Merchant Admin Portal (React + TailwindCSS)
+# FruitShop_Frontend_Admin
 
-This directory contains the standalone **Admin Control Dashboard** for the Food KH platform. Built with **React 19**, **TailwindCSS v3**, and **Vite**, it allows store merchants to manage products, categories, orders, and review analytics independently from any domain.
+This repository contains the standalone **Merchant Admin Control Portal** for the Fruit Shop platform. Built with **React 19**, **TailwindCSS v3**, and **Vite**, it allows store owners and managers to control products, categories, stock, orders, and view live analytics from any domain. Pre-configured for immediate 1-click deployment on **Netlify**, **Vercel**, or **Render**.
 
 ---
 
