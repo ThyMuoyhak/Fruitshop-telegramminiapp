@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Server, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Menu, Server, RefreshCw, CheckCircle2, AlertCircle, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 
@@ -7,6 +7,7 @@ export default function Header({ title, subtitle, onRefresh, setIsMobileOpen }) 
   const { apiUrl } = useAuth();
   const [isBackendHealthy, setIsBackendHealthy] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
 
   const checkConnection = async () => {
     setChecking(true);
@@ -17,6 +18,17 @@ export default function Header({ title, subtitle, onRefresh, setIsMobileOpen }) 
       setIsBackendHealthy(false);
     } finally {
       setChecking(false);
+    }
+  };
+
+  const handleQuickBackup = async () => {
+    setBackingUp(true);
+    try {
+      await api.downloadBackup();
+    } catch (err) {
+      alert(`Backup failed: ${err.message}`);
+    } finally {
+      setBackingUp(false);
     }
   };
 
@@ -67,6 +79,21 @@ export default function Header({ title, subtitle, onRefresh, setIsMobileOpen }) 
           )}
         </div>
 
+        {/* Quick Backup ZIP Button */}
+        <button
+          onClick={handleQuickBackup}
+          disabled={backingUp}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-colors disabled:opacity-50"
+          title="Download Full Backup ZIP (Database & Images)"
+        >
+          {backingUp ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Download className="w-3.5 h-3.5" />
+          )}
+          <span className="hidden sm:inline">{backingUp ? 'Backing up...' : 'Backup ZIP'}</span>
+        </button>
+
         {onRefresh && (
           <button
             onClick={onRefresh}
@@ -80,3 +107,4 @@ export default function Header({ title, subtitle, onRefresh, setIsMobileOpen }) 
     </header>
   );
 }
+

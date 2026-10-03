@@ -3,6 +3,8 @@ import os
 import time
 import shutil
 import logging
+import io
+import zipfile
 from datetime import datetime
 
 # Ensure UTF-8 output on Windows console
@@ -52,6 +54,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 # Ensure required directories exist
@@ -541,6 +544,84 @@ async def rest_api_upload_file(request: Request, file: UploadFile = File(...)):
         "filename": clean_filename,
         "url": f"/static/uploads/{clean_filename}"
     }
+
+# ==========================================
+# 2.8 Backup & Restore (ZIP with Database & Uploads)
+# ==========================================
+@app.get("/api/admin/backup")
+async def api_admin_backup(request: Request):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        # 1. Add SQLite database
+        if os.path.exists(config.DB_PATH):
+            zip_file.write(config.DB_PATH, arcname="food_kh.db")
+
+        # 2. Add all uploaded images
+        if os.path.exists(config.UPLOAD_DIR):
+            for root, _, files in os.walk(config.UPLOAD_DIR):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = f"uploads/{file}"
+                    zip_file.write(file_path, arcname=arcname)
+
+    zip_buffer.seek(0)
+    filename = f"foodkh_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
+
+@app.post("/api/admin/restore")
+async def api_admin_restore(request: Request, file: UploadFile = File(...)):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not file.filename or not file.filename.lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Only .zip backup files are accepted")
+
+    content = await file.read()
+    zip_buffer = io.BytesIO(content)
+
+    try:
+        with zipfile.ZipFile(zip_buffer, "r") as zip_file:
+            names = zip_file.namelist()
+
+            # Find and restore database
+            db_entry = next((n for n in names if n.replace("\\", "/").endswith("food_kh.db")), None)
+            if db_entry:
+                os.makedirs(os.path.dirname(os.path.abspath(config.DB_PATH)), exist_ok=True)
+                with open(config.DB_PATH, "wb") as f:
+                    f.write(zip_file.read(db_entry))
+
+            # Extract image uploads
+            os.makedirs(config.UPLOAD_DIR, exist_ok=True)
+            for name in names:
+                norm_name = name.replace("\\", "/")
+                if ("uploads/" in norm_name or norm_name.startswith("uploads/")) and not norm_name.endswith("/"):
+                    filename = os.path.basename(norm_name)
+                    if filename:
+                        dest_path = os.path.join(config.UPLOAD_DIR, filename)
+                        with open(dest_path, "wb") as f:
+                            f.write(zip_file.read(name))
+
+        # Re-initialize DB
+        database.init_db()
+        return {
+            "success": True,
+            "message": "Backup imported successfully! Database and all images restored."
+        }
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Corrupted or invalid ZIP file")
+    except Exception as e:
+        logger.error(f"Restore error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to restore backup: {str(e)}")
+
 
 # ==========================================
 # 3. FastAPI MVT Admin Dashboard Routes

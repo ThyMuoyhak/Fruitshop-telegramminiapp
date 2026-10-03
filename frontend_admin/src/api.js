@@ -159,4 +159,62 @@ export const api = {
       body: formData,
     });
   },
+
+  // Database & Media Backup & Restore (ZIP)
+  async downloadBackup() {
+    const baseUrl = getApiUrl();
+    const token = getAuthToken();
+
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${baseUrl}/api/admin/backup`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (response.status === 401) {
+      setAuthToken(null);
+      window.dispatchEvent(new Event('auth:unauthorized'));
+      throw new Error('Admin authentication required.');
+    }
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.detail || `Backup failed with status ${response.status}`);
+    }
+
+    // Extract filename from Content-Disposition header if available
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = `foodkh_backup_${new Date().toISOString().slice(0, 10)}.zip`;
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename=["']?([^"';]+)["']?/);
+      if (match && match[1]) {
+        filename = match[1];
+      }
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 1000);
+
+    return { success: true, filename };
+  },
+
+  async restoreBackup(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/api/admin/restore', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };
