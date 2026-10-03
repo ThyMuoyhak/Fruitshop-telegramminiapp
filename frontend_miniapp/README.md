@@ -1,6 +1,6 @@
-# Food KH — Telegram MiniApp Frontend
+# FruitShop_Frontend_MiniApp
 
-This directory contains the standalone **Customer Telegram MiniApp** client for the Food KH platform. It is lightweight, ultra-fast, and can be hosted on any static hosting platform (GitHub Pages, Vercel, Cloudflare Pages, Netlify, or Render Static Site).
+This repository contains the standalone **Customer Telegram MiniApp Web Client** for the Fruit Shop platform. It is lightweight, ultra-fast, and pre-configured for instant deployment on **Netlify**, **Vercel**, or **GitHub Pages**.
 
 ---
 
