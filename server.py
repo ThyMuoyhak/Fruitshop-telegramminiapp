@@ -622,6 +622,58 @@ async def api_admin_restore(request: Request, file: UploadFile = File(...)):
         logger.error(f"Restore error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to restore backup: {str(e)}")
 
+# ==========================================
+# 2.9 System Disk & Storage Status
+# ==========================================
+@app.get("/api/admin/system/disk")
+async def api_admin_system_disk(request: Request):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    var_data_exists = os.path.exists("/var/data")
+    is_persistent = config.DATA_DIR.startswith("/var/data") or config.DATA_DIR.startswith("/data")
+
+    # Check database file stats
+    db_exists = os.path.exists(config.DB_PATH)
+    db_size = os.path.getsize(config.DB_PATH) if db_exists else 0
+
+    # Count uploaded files
+    upload_count = 0
+    if os.path.exists(config.UPLOAD_DIR):
+        try:
+            upload_count = len([f for f in os.listdir(config.UPLOAD_DIR) if os.path.isfile(os.path.join(config.UPLOAD_DIR, f))])
+        except Exception:
+            upload_count = 0
+
+    # Test write permissions
+    writable = False
+    try:
+        test_file = os.path.join(config.DATA_DIR, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        writable = True
+    except Exception:
+        writable = False
+
+    return {
+        "status": "persistent" if (is_persistent and var_data_exists) else "ephemeral",
+        "is_persistent": bool(is_persistent and var_data_exists),
+        "data_dir": config.DATA_DIR,
+        "db_path": config.DB_PATH,
+        "db_exists": db_exists,
+        "db_size_bytes": db_size,
+        "upload_dir": config.UPLOAD_DIR,
+        "upload_count": upload_count,
+        "var_data_mounted": var_data_exists,
+        "is_writable": writable,
+        "env_data_dir": os.getenv("DATA_DIR", ""),
+        "message": (
+            "✅ Persistent Disk is ACTIVE at /var/data. Your database and images will NOT be cleared on redeploy."
+            if (is_persistent and var_data_exists)
+            else "⚠️ Ephemeral Storage: /var/data disk is not mounted. Data will be wiped on redeploy! Please set Mount Path to /var/data in Render Dashboard > Disks."
+        )
+    }
 
 # ==========================================
 # 3. FastAPI MVT Admin Dashboard Routes

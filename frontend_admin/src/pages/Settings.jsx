@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings as SettingsIcon, 
   Server, 
@@ -27,12 +27,32 @@ export default function Settings() {
   const [testResult, setTestResult] = useState(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Disk & Storage states
+  const [diskInfo, setDiskInfo] = useState(null);
+  const [loadingDisk, setLoadingDisk] = useState(false);
+
   // Backup & Restore states
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [backupMsg, setBackupMsg] = useState(null);
   const [selectedBackupFile, setSelectedBackupFile] = useState(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+
+  const fetchDiskStatus = async () => {
+    setLoadingDisk(true);
+    try {
+      const data = await api.getDiskStatus();
+      setDiskInfo(data);
+    } catch (err) {
+      console.warn('Could not fetch disk status:', err.message);
+    } finally {
+      setLoadingDisk(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDiskStatus();
+  }, [apiUrl]);
 
   const handleSaveUrl = (e) => {
     e.preventDefault();
@@ -215,6 +235,116 @@ export default function Settings() {
             Render Production
           </button>
         </div>
+      </div>
+
+      {/* Render Persistent Disk & Storage Status */}
+      <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              diskInfo?.is_persistent 
+                ? 'bg-emerald-500/10 text-emerald-400' 
+                : 'bg-amber-500/10 text-amber-400'
+            }`}>
+              <HardDrive className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <span>Render Persistent Disk (/var/data)</span>
+                {loadingDisk ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                ) : diskInfo?.is_persistent ? (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Mounted & Persistent
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-semibold border border-rose-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                    Not Mounted (Ephemeral)
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-slate-400">
+                Persistent disk status and directory verification on Render cloud.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchDiskStatus}
+            disabled={loadingDisk}
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition-colors flex items-center gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingDisk ? 'animate-spin' : ''}`} />
+            <span>Check Disk</span>
+          </button>
+        </div>
+
+        {/* Message Banner */}
+        {diskInfo && (
+          <div className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 border ${
+            diskInfo.is_persistent
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+          }`}>
+            {diskInfo.is_persistent ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+            )}
+            <div className="space-y-1">
+              <p className="font-semibold">{diskInfo.message}</p>
+              {!diskInfo.is_persistent && (
+                <div className="text-slate-300 text-[11px] space-y-1 pt-1.5 border-t border-amber-500/20">
+                  <p className="font-bold text-amber-200">How to mount your Render Disk so data NEVER clears on redeploy:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-slate-300">
+                    <li>Go to Render Dashboard &gt; <strong>FruitShop_backendAPI</strong> &gt; <strong>Disks</strong>.</li>
+                    <li>Click <strong>Edit</strong> on your 5 GB disk and set <strong>Mount Path</strong> to: <code className="text-amber-200 font-mono bg-slate-800 px-1 py-0.5 rounded">/var/data</code>.</li>
+                    <li>Go to <strong>Environment</strong> tab on Render and add variable: <code className="text-amber-200 font-mono bg-slate-800 px-1 py-0.5 rounded">DATA_DIR = /var/data</code>.</li>
+                    <li>Update your Render payment method under <a href="https://dashboard.render.com/billing#payment-method" target="_blank" rel="noreferrer" className="text-amber-300 underline font-semibold">Render Billing</a> to keep the disk active.</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Disk Info Grid */}
+        {diskInfo && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
+            <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/60">
+              <span className="text-slate-400 block text-[11px]">Database Path</span>
+              <span className="font-mono text-white text-[11px] truncate block" title={diskInfo.db_path}>
+                {diskInfo.db_path}
+              </span>
+              <span className="text-[10px] text-emerald-400 mt-1 block">
+                {diskInfo.db_exists ? `${(diskInfo.db_size_bytes / 1024).toFixed(1)} KB` : 'New File'}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/60">
+              <span className="text-slate-400 block text-[11px]">Uploads Directory</span>
+              <span className="font-mono text-white text-[11px] truncate block" title={diskInfo.upload_dir}>
+                {diskInfo.upload_dir}
+              </span>
+              <span className="text-[10px] text-emerald-400 mt-1 block">
+                {diskInfo.upload_count} uploaded image(s)
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/60">
+              <span className="text-slate-400 block text-[11px]">Storage Persistence</span>
+              <span className="font-semibold text-white block mt-0.5">
+                {diskInfo.is_persistent ? 'Persistent Disk (/var/data)' : 'Local Container (Ephemeral)'}
+              </span>
+              <span className={`text-[10px] mt-1 block font-medium ${diskInfo.is_persistent ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {diskInfo.is_persistent ? '✅ Safe across redeploys' : '⚠️ Cleared on redeploy!'}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Database & Media Backup & Restore Center */}

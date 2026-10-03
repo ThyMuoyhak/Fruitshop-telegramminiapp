@@ -217,4 +217,10 @@ export const api = {
       body: formData,
     });
   },
+
+  // Disk & Storage Diagnostics
+  async getDiskStatus() {
+    return request('/api/admin/system/disk');
+  },
 };
+

@@ -41,14 +41,39 @@ if not DATA_DIR:
     else:
         DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
-os.makedirs(DATA_DIR, exist_ok=True)
+try:
+    os.makedirs(DATA_DIR, exist_ok=True)
+except Exception as e:
+    print(f"⚠️ Failed to create DATA_DIR {DATA_DIR}: {e}. Falling back to local dir.")
+    DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+    os.makedirs(DATA_DIR, exist_ok=True)
 
 # Database Path (stored in persistent disk)
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "food_kh.db"))
 
 # Upload Directory (stored in persistent disk)
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(DATA_DIR, "uploads"))
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except Exception as e:
+    print(f"⚠️ Failed to create UPLOAD_DIR {UPLOAD_DIR}: {e}")
+
+# Storage diagnostics print on startup
+print("=" * 60)
+print("💾 Food KH Storage & Disk Configuration:")
+print(f"  • DATA_DIR   : {DATA_DIR}")
+print(f"  • DB_PATH    : {DB_PATH}")
+print(f"  • UPLOAD_DIR : {UPLOAD_DIR}")
+is_disk_active = os.path.exists("/var/data") or (os.getenv("DATA_DIR") and os.getenv("DATA_DIR").startswith("/var/data"))
+if is_disk_active:
+    print("  • Status     : 🟢 PERSISTENT DISK DETECTED (/var/data)")
+    print("  • Note       : Data is preserved across redeploys.")
+else:
+    print("  • Status     : ⚠️ EPHEMERAL STORAGE (Container Local)")
+    print("  • WARNING    : Any data created WILL BE CLEARED on redeployment!")
+    print("  • ACTION REQ : In Render Dashboard > Disks, set Mount Path to: /var/data")
+    print("                 In Render Dashboard > Environment, set DATA_DIR to: /var/data")
+print("=" * 60)
 
 # If persistent DB does not exist yet on a fresh disk, copy initial seed DB if available
 repo_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "food_kh.db")
