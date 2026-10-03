@@ -76,14 +76,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-def main():
-    print(f"==================================================")
-    print(f"🚀 Starting {config.STORE_NAME_EN} Telegram Bot...")
-    print(f"🤖 Bot Username: @{config.BOT_USERNAME}")
-    print(f"👤 Admin IDs: {config.ADMIN_IDS}")
-    print(f"💳 Payment Gateway: AnajakPay KHQRcc (ABA Pay)")
-    print(f"==================================================")
-
+def build_bot_app():
     # Initialize SQLite database
     database.init_db()
 
@@ -150,8 +143,37 @@ def main():
 
     # 5. Error Handler
     app.add_error_handler(error_handler)
+    return app
 
-    # Start Polling
+async def start_bot_coroutine():
+    """
+    Asynchronous runner for integration inside bot_worker.py with FastAPI.
+    """
+    logger.info("Initializing Telegram Bot in background worker mode...")
+    app = build_bot_app()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling(drop_pending_updates=True)
+    logger.info(f"Telegram Bot @{config.BOT_USERNAME} polling started successfully in background.")
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        pass
+    finally:
+        await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
+
+def main():
+    print(f"==================================================")
+    print(f"🚀 Starting {config.STORE_NAME_EN} Telegram Bot...")
+    print(f"🤖 Bot Username: @{config.BOT_USERNAME}")
+    print(f"👤 Admin IDs: {config.ADMIN_IDS}")
+    print(f"💳 Payment Gateway: AnajakPay KHQRcc (ABA Pay)")
+    print(f"==================================================")
+
+    app = build_bot_app()
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
