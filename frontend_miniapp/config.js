@@ -9,6 +9,6 @@ if (paramApi) {
 export const API_BASE_URL = localStorage.getItem('FOODKH_API_URL') || 
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:8000' 
-    : 'https://fruitshop-telegramminiapp.onrender.com');
+    : 'https://fruitshop-backendapi.onrender.com');
 
 export const KHR_EXCHANGE_RATE = 4100;

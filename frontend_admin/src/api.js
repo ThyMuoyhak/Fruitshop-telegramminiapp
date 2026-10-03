@@ -1,5 +1,5 @@
 // API Client for Food KH Admin Portal
-const DEFAULT_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const DEFAULT_API_URL = import.meta.env.VITE_API_URL || 'https://fruitshop-backendapi.onrender.com';
 
 export const getApiUrl = () => {
   return localStorage.getItem('foodkh_api_url') || DEFAULT_API_URL;

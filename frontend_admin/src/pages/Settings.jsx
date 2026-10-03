@@ -136,7 +136,7 @@ export default function Settings() {
           </button>
           <button
             type="button"
-            onClick={() => setInputUrl('https://fruitshop-telegramminiapp.onrender.com')}
+            onClick={() => setInputUrl('https://fruitshop-backendapi.onrender.com')}
             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[11px]"
           >
             Render Production
