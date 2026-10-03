@@ -1,6 +1,6 @@
-# Food KH — Backend REST API & Telegram Bot Engine
+# FruitShop_backendAPI
 
-This directory contains the decoupled **Backend Service** for the Food KH platform. It provides a high-performance **FastAPI REST API**, an embedded **SQLite** database, an **AnajakPay KHQR** payment processing bridge, and an asynchronous **Telegram Bot** engine.
+This repository contains the standalone **Backend REST API & Telegram Bot Service** for the Fruit Shop platform. It provides a high-performance **FastAPI REST API**, an embedded **SQLite** database, an **AnajakPay KHQR** payment processing bridge, and an asynchronous **Telegram Bot** engine.
 
 ---
 
