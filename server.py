@@ -35,10 +35,20 @@ app = FastAPI(
     openapi_url=None
 )
 
-# Enable CORS for React Admin and MiniApp on separate origins/ports
+# Restrict CORS to Frontend_admin and Frontend_miniapp Netlify domains
+ALLOWED_ORIGINS = [
+    "https://delightful-tulumba-57fd5b.netlify.app",
+    "https://cute-blini-a8e17a.netlify.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

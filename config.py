@@ -81,11 +81,11 @@ MAX_POLL_ATTEMPTS = 45  # 45 * 4 = 180 seconds (3 minutes)
 SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
 SERVER_PORT = int(os.getenv("PORT", os.getenv("SERVER_PORT", "8000")))
 
-render_url = os.getenv("RENDER_EXTERNAL_URL")
-if render_url:
-    WEBAPP_URL = os.getenv("WEBAPP_URL", f"{render_url.rstrip('/')}/shop")
-else:
-    WEBAPP_URL = os.getenv("WEBAPP_URL", "http://localhost:8000/shop")
+# MiniApp URL (Hosted on Netlify)
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://cute-blini-a8e17a.netlify.app")
+
+# Admin Dashboard Frontend URL (Hosted on Netlify)
+ADMIN_FRONTEND_URL = os.getenv("ADMIN_FRONTEND_URL", "https://delightful-tulumba-57fd5b.netlify.app")
 
 # Admin Dashboard Credentials (FastAPI MVT)
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
