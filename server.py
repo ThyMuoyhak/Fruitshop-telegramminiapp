@@ -631,7 +631,8 @@ async def api_admin_system_disk(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     var_data_exists = os.path.exists("/var/data")
-    is_persistent = config.DATA_DIR.startswith("/var/data") or config.DATA_DIR.startswith("/data")
+    is_persistent = (config.DATA_DIR.startswith("/var/data") or config.DATA_DIR.startswith("/data")) and config.DB_PATH.startswith(config.DATA_DIR)
+
 
     # Check database file stats
     db_exists = os.path.exists(config.DB_PATH)

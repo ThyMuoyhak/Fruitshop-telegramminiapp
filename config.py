@@ -48,11 +48,33 @@ except Exception as e:
     DATA_DIR = os.path.dirname(os.path.abspath(__file__))
     os.makedirs(DATA_DIR, exist_ok=True)
 
-# Database Path (stored in persistent disk)
-DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "food_kh.db"))
+# Database Path (ALWAYS stored inside DATA_DIR on persistent disk)
+raw_db_path = os.getenv("DB_PATH")
+if raw_db_path:
+    # If DB_PATH is just a filename like "food_kh.db" or relative path, force it into DATA_DIR
+    if not os.path.isabs(raw_db_path) or not raw_db_path.startswith(DATA_DIR):
+        db_filename = os.path.basename(raw_db_path) or "food_kh.db"
+        DB_PATH = os.path.join(DATA_DIR, db_filename)
+    else:
+        DB_PATH = raw_db_path
+else:
+    DB_PATH = os.path.join(DATA_DIR, "food_kh.db")
 
-# Upload Directory (stored in persistent disk)
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(DATA_DIR, "uploads"))
+DB_PATH = os.path.abspath(DB_PATH)
+
+# Upload Directory (ALWAYS stored inside DATA_DIR on persistent disk)
+raw_upload_dir = os.getenv("UPLOAD_DIR")
+if raw_upload_dir:
+    if not os.path.isabs(raw_upload_dir) or not raw_upload_dir.startswith(DATA_DIR):
+        upload_sub = os.path.basename(raw_upload_dir) or "uploads"
+        UPLOAD_DIR = os.path.join(DATA_DIR, upload_sub)
+    else:
+        UPLOAD_DIR = raw_upload_dir
+else:
+    UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+
+UPLOAD_DIR = os.path.abspath(UPLOAD_DIR)
+
 try:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 except Exception as e:
@@ -64,10 +86,10 @@ print("💾 Food KH Storage & Disk Configuration:")
 print(f"  • DATA_DIR   : {DATA_DIR}")
 print(f"  • DB_PATH    : {DB_PATH}")
 print(f"  • UPLOAD_DIR : {UPLOAD_DIR}")
-is_disk_active = os.path.exists("/var/data") or (os.getenv("DATA_DIR") and os.getenv("DATA_DIR").startswith("/var/data"))
+is_disk_active = (os.path.exists("/var/data") or (os.getenv("DATA_DIR") and os.getenv("DATA_DIR").startswith("/var/data"))) and DB_PATH.startswith(DATA_DIR)
 if is_disk_active:
-    print("  • Status     : 🟢 PERSISTENT DISK DETECTED (/var/data)")
-    print("  • Note       : Data is preserved across redeploys.")
+    print("  • Status     : 🟢 PERSISTENT DISK DETECTED & ACTIVE (/var/data)")
+    print("  • Note       : SQLite DB & uploads are stored safely on the persistent disk.")
 else:
     print("  • Status     : ⚠️ EPHEMERAL STORAGE (Container Local)")
     print("  • WARNING    : Any data created WILL BE CLEARED on redeployment!")
@@ -76,14 +98,20 @@ else:
 print("=" * 60)
 
 # If persistent DB does not exist yet on a fresh disk, copy initial seed DB if available
-repo_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "food_kh.db")
-if not os.path.exists(DB_PATH) and os.path.exists(repo_db) and os.path.abspath(DB_PATH) != os.path.abspath(repo_db):
-    try:
-        import shutil
-        shutil.copy2(repo_db, DB_PATH)
-        print(f"✅ Initialized persistent database from repo seed: {DB_PATH}")
-    except Exception as e:
-        print(f"Could not copy seed DB: {e}")
+if not os.path.exists(DB_PATH):
+    possible_seeds = [
+        os.path.join(os.getcwd(), "food_kh.db"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "food_kh.db"),
+    ]
+    for seed in possible_seeds:
+        if os.path.exists(seed) and os.path.abspath(seed) != os.path.abspath(DB_PATH):
+            try:
+                import shutil
+                shutil.copy2(seed, DB_PATH)
+                print(f"✅ Initialized persistent database from seed: {seed} -> {DB_PATH}")
+                break
+            except Exception as e:
+                print(f"Could not copy seed DB: {e}")
 
 # If persistent uploads directory is empty, seed with initial sample images if available
 repo_uploads = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads")
